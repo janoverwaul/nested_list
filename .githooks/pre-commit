@@ -1,0 +1,42 @@
+#!/bin/sh
+# +---------------------------------------------------------------------+
+# | pre-commit: verhindert, dass Zugangsdaten ins Repo gelangen         |
+# | Einmalig aktivieren:  git config core.hooksPath .githooks           |
+# +---------------------------------------------------------------------+
+# Blockiert den Commit, wenn
+#  1. eine Datei namens config.php (oder .env) gestaged ist, oder
+#  2. eine hinzugefügte Zeile einem Passwort-Schlüssel (password, pass,
+#     passwort, db_password, DB_PASSWORD) einen nicht leeren Text zuweist
+# Notfalls (wirklich nur, wenn du sicher bist): git commit --no-verify
+
+fail=0
+
+files=$(git diff --cached --name-only --diff-filter=ACMR)
+
+for f in $files; do
+	case "$(basename "$f")" in
+		config.php|.env)
+			echo "✗ $f darf nicht committet werden (enthält Zugangsdaten)."
+			fail=1
+			;;
+	esac
+done
+
+hits=$(git diff --cached -U0 --diff-filter=ACMR -- . ':(exclude).githooks' \
+	| grep -E "^\+" \
+	| grep -v -E "^\+\+\+ " \
+	| grep -i -E "(['\"](db_)?pass(word|wort)?['\"][[:space:]]*(=>|,)[[:space:]]*['\"][^'\"]+['\"])|(DB_PASS(WORD)?[[:space:]]*=[[:space:]]*[^[:space:]]+)")
+
+if [ -n "$hits" ]; then
+	echo "✗ Gestagte Änderungen enthalten offenbar ein Passwort:"
+	echo "$hits" | sed 's/^/    /'
+	fail=1
+fi
+
+if [ "$fail" -ne 0 ]; then
+	echo ""
+	echo "Commit abgebrochen. Zugangsdaten gehören nur in die ignorierte config.php."
+	exit 1
+fi
+
+exit 0

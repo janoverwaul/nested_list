@@ -1,0 +1,7 @@
+# Alle Textdateien im Repo und im Arbeitsordner mit LF-Zeilenenden
+# (der Server ist Linux; Shell-Skripte laufen mit CRLF nicht).
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="de">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Tree Editor · AdjacencyList</title>
+		<link rel="icon" type="image/png" href="https://playground.jan-overwaul.de/favicon.png">
+		<link rel="stylesheet" href="style.css">
+		<script src="https://cdn.jan-overwaul.de/5.4.3@echarts.min.js/echarts.min.js" integrity="sha384-BQKzmHvQLMCAnL3UtDBA1Al5tFjsCz1wrMlIUA1wkzo14DYkRWjywW+p9pCj0cwd" crossorigin="anonymous"></script>
+		<script src="app.js" defer></script>
+	</head>
+	<body>
+		<header>
+			<h1>Tree Editor</h1>
+			<span class="subtitle">AdjacencyList · MetaTree · ECharts</span>
+			<a class="github-link" href="https://github.com/janoverwaul/nested_list" target="_blank" rel="noopener" title="Quellcode auf GitHub">
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+					<path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
+				</svg>
+				GitHub
+			</a>
+			<div class="header-status" id="session-info"></div>
+			<div class="zoom-group" title="Zoomen – auch mit Strg + Mausrad">
+				<button class="btn btn-ghost btn-inline" id="btn-zoom-out" aria-label="Verkleinern">−</button>
+				<button class="btn btn-ghost btn-inline" id="btn-zoom-reset" title="Zurück auf 100 %">100 %</button>
+				<button class="btn btn-ghost btn-inline" id="btn-zoom-in" aria-label="Vergrößern">+</button>
+			</div>
+			<button class="btn btn-ghost btn-inline" id="btn-orientation">⇅ Senkrecht</button>
+			<button class="btn btn-ghost btn-inline" id="btn-reload" title="Baum neu laden">↺ Neu laden</button>
+		</header>
+
+		<!-- ── Linke Seitenleiste ── -->
+		<aside id="sidebar">
+			<section>
+				<div class="panel-title">Ausgewählter Knoten</div>
+				<div id="node-info">
+					<div class="node-name" id="sel-name">— nichts ausgewählt —</div>
+					<div class="node-props">
+						<div class="prop-row"><span>ID</span><span class="prop-val" id="sel-id">–</span></div>
+						<div class="prop-row"><span>parent_id</span><span class="prop-val" id="sel-parent">–</span></div>
+						<div class="prop-row"><span>sort_order</span><span class="prop-val" id="sel-sort">–</span></div>
+						<div class="prop-row"><span>Kinder</span><span class="prop-val" id="sel-children">–</span></div>
+					</div>
+					<label class="check-row">
+						<input type="checkbox" id="sel-online" disabled>
+						<span>online (sichtbar)</span>
+					</label>
+				</div>
+				<div class="form-group">
+					<label for="edit-name">Name bearbeiten</label>
+					<div class="input-row">
+						<input type="text" id="edit-name" placeholder="—" maxlength="255" disabled>
+						<button class="btn btn-primary btn-icon" id="btn-save-name" title="Namen speichern" disabled>✓</button>
+					</div>
+				</div>
+			</section>
+
+			<section>
+				<div class="panel-title">Aktionen</div>
+				<div class="btn-group">
+					<div class="btn-row">
+						<button class="btn btn-ghost" id="btn-up" disabled>▲ Hoch</button>
+						<button class="btn btn-ghost" id="btn-down" disabled>▼ Runter</button>
+					</div>
+					<button class="btn btn-warn" id="btn-move-start" disabled>⇄ Verschieben …</button>
+					<div id="move-hint">Klick im Baum auf den neuen Elternknoten.</div>
+					<button class="btn btn-danger" id="btn-delete" disabled>✕ Knoten löschen</button>
+				</div>
+			</section>
+
+			<section>
+				<div class="panel-title">Knoten einfügen</div>
+				<div class="form-group">
+					<label for="new-name">Name</label>
+					<input type="text" id="new-name" placeholder="z. B. Unterkategorie" maxlength="255">
+				</div>
+				<div class="form-group">
+					<label for="new-parent">Eltern-ID (leer = ausgewählter Knoten)</label>
+					<div class="dropdown-wrap">
+						<input type="text" id="new-parent" placeholder="automatisch" autocomplete="off" inputmode="numeric">
+						<div id="node-dropdown" class="dropdown"></div>
+					</div>
+				</div>
+				<button class="btn btn-primary" id="btn-insert">＋ Einfügen</button>
+			</section>
+		</aside>
+
+		<!-- ── Baum ── -->
+		<main>
+			<div id="move-overlay">
+				<span>⇄ Verschiebe-Modus – klick auf den neuen Elternknoten</span>
+				<button class="btn btn-ghost btn-inline" id="btn-move-cancel">Abbrechen</button>
+			</div>
+			<div id="chart"></div>
+		</main>
+
+		<!-- ── Rechte Seitenleiste: Meta-Daten ── -->
+		<aside id="meta-panel">
+			<section>
+				<div class="panel-title">Meta-Daten</div>
+				<div id="meta-node-name" class="hint">Wähl einen Knoten aus …</div>
+				<div id="meta-fields">
+					<div class="meta-empty">Noch keine Meta-Spalten angelegt.</div>
+				</div>
+				<button class="btn btn-meta" id="btn-save-meta" disabled>✓ Meta-Daten speichern</button>
+			</section>
+
+			<section>
+				<div class="panel-title">Neue Spalte</div>
+				<div class="input-row">
+					<input type="text" id="new-column" class="mono" placeholder="spalten_name" maxlength="64">
+					<button class="btn btn-ghost btn-icon" id="btn-add-column" title="Spalte anlegen">＋</button>
+				</div>
+				<div class="hint small">Buchstaben, Ziffern und _ · wird sofort in der Datenbank angelegt</div>
+			</section>
+
+			<section>
+				<div class="panel-title">Spalte löschen</div>
+				<div class="input-row">
+					<select id="delete-column-select">
+						<option value="">— wählen —</option>
+					</select>
+					<button class="btn btn-danger btn-icon" id="btn-delete-column" title="Spalte löschen">✕</button>
+				</div>
+			</section>
+		</aside>
+
+		<footer>
+			<span>© 2026 <a href="https://jan-overwaul.de" target="_blank" rel="noopener">Jan Overwaul</a></span>
+			<span class="footer-sep">·</span>
+			<span>Idee nach <em>NESTEDSET</em> von Oliver Blum (<a href="https://github.com/blumanski" target="_blank" rel="noopener">Blumithek</a>, 2007)</span>
+		</footer>
+
+		<div id="toast" role="status" aria-live="polite"></div>
+
+		<!-- ── Hinweis zur Demo-Session ── -->
+		<div id="cookie-modal" role="dialog" aria-modal="true" aria-labelledby="cookie-title">
+			<div id="cookie-box">
+				<h2 id="cookie-title">Demo-Session</h2>
+				<p>
+					Dieses Tool setzt einen <strong>technisch notwendigen Cookie</strong>
+					(<code>demo_token</code>), damit du deine eigene Demo-Datenbank bekommst.
+					Es gibt keine Tracking- oder Marketing-Cookies.
+				</p>
+				<p class="hint small">
+					Deine Demo-Daten werden nach <span id="cookie-ttl">2</span> Stunden automatisch gelöscht.
+					Gespeichert wird nur ein anonymes Session-Token.
+				</p>
+				<button class="btn btn-primary" id="btn-cookie-accept">Verstanden &amp; starten</button>
+			</div>
+		</div>
+	</body>
+</html>

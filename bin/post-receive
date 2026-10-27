@@ -1,0 +1,27 @@
+#!/bin/bash
+# +---------------------------------------------------------------------+
+# | post-receive – Vorlage für ein Bare-Repo auf dem Server             |
+# +---------------------------------------------------------------------+
+# | Je Installation ein eigenes Bare-Repo unter ~/repos/, z. B.         |
+# |   nested_list-test.git        → ~/www/nested_list-test              |
+# |   nested_list-demo.git        → ~/www/nested_list-demo              |
+# |                                                                     |
+# | Der Hook läuft im Bare-Repo (~/repos/<name>.git), oft im SSH-chroot |
+# | von KeyHelp. Deshalb ein RELATIVER Pfad zur Arbeitskopie            |
+# | und nur bash, git und Bordmittel – kein PHP, kein ln.               |
+# +---------------------------------------------------------------------+
+
+APP_DIR="../../www/nested_list-test"
+BRANCH="main"
+
+while read -r oldrev newrev ref; do
+	if [ "$ref" != "refs/heads/$BRANCH" ]; then
+		echo "nested_list: Branch ${ref#refs/heads/} wird nicht ausgeliefert (nur $BRANCH)."
+		continue
+	fi
+
+	echo "nested_list: Checkout $BRANCH nach $APP_DIR"
+	git --work-tree="$APP_DIR" checkout -f "$BRANCH" || exit 1
+
+	APP_DIR="$APP_DIR" /bin/bash "$APP_DIR/bin/deploy.sh"
+done

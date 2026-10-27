@@ -1,0 +1,2 @@
+# Kein Webzugriff auf diesen Ordner (falls er versehentlich im Webroot liegt)
+Require all denied
